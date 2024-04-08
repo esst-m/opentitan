@@ -406,6 +406,7 @@ static void aes_serial_advance_random_data(void) {
  * @param uj The received uJSON data.
  */
 status_t handle_aes_sca_batch_encrypt(ujson_t *uj) {
+  LOG_INFO('Batch encrypt Start.');
   cryptotest_aes_sca_data_t uj_data;
   TRY(ujson_deserialize_cryptotest_aes_sca_data_t(uj, &uj_data));
   uint32_t num_encryptions = 0;
@@ -437,6 +438,7 @@ status_t handle_aes_sca_batch_encrypt(ujson_t *uj) {
 
   TRY(aes_send_ciphertext(true, uj));
 
+  LOG_INFO('Batch encrypt end.');
   return OK_STATUS(0);
 }
 
@@ -602,6 +604,7 @@ status_t handle_aes_sca_fvsr_key_set(ujson_t *uj) {
  * @param uj The received uJSON data.
  */
 status_t aes_sca_fvsr_key_batch_generate(cryptotest_aes_sca_data_t uj_data) {
+  LOG_INFO('Batch generation start.');
   uint32_t num_encryptions = 0;
   num_encryptions = read_32(uj_data.data);
   if (num_encryptions > kNumBatchOpsMax) {
@@ -621,6 +624,7 @@ status_t aes_sca_fvsr_key_batch_generate(cryptotest_aes_sca_data_t uj_data) {
     sample_fixed = batch_plaintexts[i][0] & 0x1;
   }
 
+  LOG_INFO('Batch generation end.');
   return OK_STATUS(0);
 }
 
@@ -848,6 +852,7 @@ status_t handle_aes_sca_seed_lfsr_order(ujson_t *uj) {
  * @param uj The received uJSON data.
  */
 status_t handle_aes_sca_fvsr_key_start_batch_generate(ujson_t *uj) {
+  LOG_INFO('Batch Generate Starting.');
   cryptotest_aes_sca_data_t uj_data;
   TRY(ujson_deserialize_cryptotest_aes_sca_data_t(uj, &uj_data));
   uint32_t command = 0;
@@ -896,6 +901,7 @@ status_t handle_aes_sca_fvsr_key_start_batch_generate(ujson_t *uj) {
 
   sca_seed_lfsr(kPrngInitialState, kScaLfsrOrder);
 
+  LOG_INFO('Batch Generate started.');
   return OK_STATUS(0);
 }
 
@@ -907,6 +913,7 @@ status_t handle_aes_sca_fvsr_key_start_batch_generate(ujson_t *uj) {
  * @param uj The received uJSON data.
  */
 status_t handle_aes_sca_init(ujson_t *uj) {
+  LOG_INFO('Initializing');
   // Read mode. FPGA or discrete.
   cryptotest_aes_sca_fpga_mode_t uj_data;
   TRY(ujson_deserialize_cryptotest_aes_sca_fpga_mode_t(uj, &uj_data));
@@ -914,7 +921,9 @@ status_t handle_aes_sca_init(ujson_t *uj) {
     fpga_mode = true;
   }
   sca_init(kScaTriggerSourceAes, kScaPeripheralIoDiv4 | kScaPeripheralAes);
+  LOG_INFO('Initialized');
 
+  LOG_INFO('Cpu configuration start');
   UJSON_CHECK_DIF_OK(
       dif_aes_init(mmio_region_from_addr(TOP_EARLGREY_AES_BASE_ADDR), &aes));
   UJSON_CHECK_DIF_OK(dif_aes_reset(&aes));
@@ -922,6 +931,7 @@ status_t handle_aes_sca_init(ujson_t *uj) {
   // Disable the instruction cache and dummy instructions for better SCA
   // measurements.
   sca_configure_cpu();
+  LOG_INFO('Cpu configuration end');
 
   return OK_STATUS(0);
 }
