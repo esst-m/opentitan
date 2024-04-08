@@ -270,13 +270,18 @@ static aes_sca_error_t aes_encrypt(const uint8_t *plaintext,
  */
 static status_t aes_send_ciphertext(bool only_first_word, ujson_t *uj) {
   bool ready = false;
+  LOG_INFO('Waiting for ready');
   do {
     TRY(dif_aes_get_status(&aes, kDifAesStatusOutputValid, &ready));
   } while (!ready);
+  LOG_INFO('Received ready');
 
+  LOG_INFO('Reading ctxt');
   dif_aes_data_t ciphertext;
   UJSON_CHECK_DIF_OK(dif_aes_read_output(&aes, &ciphertext));
+  LOG_INFO('Received ctxt');
 
+  LOG_INFO('Copying ctxt');
   cryptotest_aes_sca_ciphertext_t uj_output;
   memset(uj_output.ciphertext, 0, AESSCA_CMD_MAX_DATA_BYTES);
   uj_output.ciphertext_length = kAesTextLength;
@@ -285,7 +290,11 @@ static status_t aes_send_ciphertext(bool only_first_word, ujson_t *uj) {
   }
   memcpy(uj_output.ciphertext, (uint8_t *)ciphertext.data,
          uj_output.ciphertext_length);
+
+  LOG_INFO('Copied ctxt');
+  LOG_INFO('Sending ctxt');
   RESP_OK(ujson_serialize_cryptotest_aes_sca_ciphertext_t, uj, &uj_output);
+  LOG_INFO('Sent ctxt');
   return OK_STATUS(0);
 }
 
@@ -504,10 +513,12 @@ status_t handle_aes_sca_batch_alternative_encrypt(ujson_t *uj) {
     sca_set_trigger_low();
   }
 
+  LOG_INFO("Sending (batch_alternative)");
   // send last ciphertext
   cryptotest_aes_sca_ciphertext_t uj_output;
   memcpy(uj_output.ciphertext, (uint8_t *)ciphertext.data, kAesTextLength);
   RESP_OK(ujson_serialize_cryptotest_aes_sca_ciphertext_t, uj, &uj_output);
+  LOG_INFO("Sent");
 
   return OK_STATUS(0);
 }
@@ -687,7 +698,9 @@ status_t handle_aes_sca_fvsr_key_batch_encrypt(ujson_t *uj) {
     sca_set_trigger_low();
   }
 
+  LOG_INFO("Sending (fvsr_key_batch)");
   TRY(aes_send_ciphertext(false, uj));
+  LOG_INFO("Sent");
 
   // Start to generate random keys and plaintexts for the next batch when the
   // waves are getting from scope by the host to increase capture rate.
@@ -753,8 +766,9 @@ status_t handle_aes_sca_fvsr_data_batch_encrypt(ujson_t *uj) {
   if (fpga_mode) {
     sca_set_trigger_low();
   }
-
+  LOG_INFO("Sending (fvsr_data_batch)");
   TRY(aes_send_ciphertext(false, uj));
+  LOG_INFO("Sent");
 
   return OK_STATUS(0);
 }
@@ -792,6 +806,7 @@ status_t handle_aes_sca_seed_lfsr(ujson_t *uj) {
       return ABORTED();
     }
     UJSON_CHECK_DIF_OK(dif_aes_trigger(&aes, kDifAesTriggerPrngReseed));
+    LOG_INFO("Disabled masks.");
   }
 #endif
 
